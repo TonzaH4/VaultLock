@@ -1,4 +1,4 @@
-# File Encryption and Decryption
+# VaultLock
 
 This project provides a secure way to encrypt and decrypt files using AES (Advanced Encryption Standard) in CBC (Cipher Block Chaining) mode and RSA (Rivest–Shamir–Adleman) for key exchange. The implementation ensures that each file is encrypted with a unique AES key and initialization vector (IV).
 
