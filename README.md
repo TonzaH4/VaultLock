@@ -19,6 +19,7 @@ This project provides a secure way to encrypt and decrypt files using AES (Advan
 - Uses RSA for securely exchanging the AES key
 - HMAC for integrity verification
 - Secure file deletion to prevent data recovery
+- Uses Scrypt for key derivation and random salt
 
 ## Requirements
 
