@@ -1,11 +1,15 @@
 import os
 import argparse
+import logging
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization, hashes, hmac
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.asymmetric import padding as asymmetric_padding
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 import struct
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 # Derive AES key using scrypt
 def derive_key(password, salt):
@@ -33,12 +37,9 @@ def decrypt_aes_key(rsa_private_key, encrypted_aes_key):
 
 # Remove padding according to PKCS#7
 def unpad(padded_data):
-    if not padded_data:
-        return None  # Return None if data is empty
-    padding_length = padded_data[-1]
-    if padding_length < 1 or padding_length > 16:
-        return None  # Return None on invalid padding
-    return padded_data[:-padding_length]
+    from cryptography.hazmat.primitives import padding
+    unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
+    return unpadder.update(padded_data) + unpadder.finalize()
 
 # Decrypt file using AES-CBC
 def decrypt_file(ciphertext, aes_key, iv):
@@ -69,49 +70,49 @@ def verify_hmac(aes_key, data, expected_hmac):
 # Main decryption process for multiple files
 def main_decrypt(enc_file_paths, pem_file, password_file):
     for enc_file_path in enc_file_paths:
-        with open(enc_file_path, 'rb') as enc_file:
-            # Read length-prefixed encrypted AES key
-            aes_key_len = struct.unpack('>I', enc_file.read(4))[0]
-            encrypted_aes_key = enc_file.read(aes_key_len)
-            salt = enc_file.read(16)  # Read the salt
-            iv = enc_file.read(16)  # Read IV
+        try:
+            with open(enc_file_path, 'rb') as enc_file:
+                # Read length-prefixed encrypted AES key
+                aes_key_len = struct.unpack('>I', enc_file.read(4))[0]
+                encrypted_aes_key = enc_file.read(aes_key_len)
+                salt = enc_file.read(16)  # Read the salt
+                iv = enc_file.read(16)  # Read IV
 
-            # Read the rest of the file
-            remaining_data = enc_file.read()
+                # Read the rest of the file
+                remaining_data = enc_file.read()
+                
+                # The last 32 bytes of the remaining data is the HMAC
+                hmac_signature = remaining_data[-32:]  # HMAC
+                ciphertext = remaining_data[:-32]  # The rest is the ciphertext
+
+            with open(password_file, 'rb') as pwd_file:
+                password = pwd_file.read()
+
+            with open(pem_file, 'rb') as private_file:
+                private_key = serialization.load_pem_private_key(
+                    private_file.read(),
+                    password=password,
+                    backend=default_backend()
+                )
+
+            # Decrypt AES key
+            aes_key = decrypt_aes_key(private_key, encrypted_aes_key)
+
+            # Verify HMAC integrity before decryption
+            verify_hmac(aes_key, ciphertext, hmac_signature)  # Use aes_key for verification
+
+            plaintext = decrypt_file(ciphertext, aes_key, iv)  # Use aes_key for decryption
             
-            # The last 32 bytes of the remaining data is the HMAC
-            hmac_signature = remaining_data[-32:]  # HMAC
-            ciphertext = remaining_data[:-32]  # The rest is the ciphertext
+            with open(enc_file_path[:-4], 'wb') as dec_file:
+                dec_file.write(plaintext)
 
-        with open(password_file, 'rb') as pwd_file:
-            password = pwd_file.read()
+            logging.info(f'Decrypted file saved as {enc_file_path[:-4]}')
 
-        with open(pem_file, 'rb') as private_file:
-            private_key = serialization.load_pem_private_key(
-                private_file.read(),
-                password=password,
-                backend=default_backend()
-            )
+            # Securely delete the encrypted file after decryption
+            securely_delete(enc_file_path)
 
-        # Decrypt AES key
-        aes_key = decrypt_aes_key(private_key, encrypted_aes_key)
-
-        # Verify HMAC integrity before decryption
-        verify_hmac(aes_key, ciphertext, hmac_signature)  # Use aes_key for verification
-
-        plaintext = decrypt_file(ciphertext, aes_key, iv)  # Use aes_key for decryption
-        
-        if plaintext is None:
-            print(f'Decryption failed for {enc_file_path}: Padding error or invalid data.')
-            continue  # Skip this file if decryption failed
-
-        with open(enc_file_path[:-4], 'wb') as dec_file:
-            dec_file.write(plaintext)
-
-        print(f'Decrypted file saved as {enc_file_path[:-4]}')
-
-        # Securely delete the encrypted file after decryption
-        securely_delete(enc_file_path)
+        except Exception as e:
+            logging.error(f'Error processing {enc_file_path}: {e}')
 
     # Securely delete the password and private key files after decryption
     securely_delete(password_file)
