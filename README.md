@@ -14,7 +14,7 @@ This project provides a secure way to encrypt and decrypt files using AES (Advan
 
 ## Features
 
-- Securely encrypt and decrypt files
+- Encrypt and decrypt files and all contents within directories securely.
 - Generates a unique AES key and IV for each file
 - Uses RSA for securely exchanging the AES key
 - HMAC for integrity verification
