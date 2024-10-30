@@ -120,7 +120,7 @@ def main_encrypt(file_paths):
     process_files(file_paths, private_key, public_key)
 
     # Save the private key securely with a random password
-    key_password = os.urandom(16)
+    key_password = os.urandom(32)
     try:
         with open('private_key.pem', 'wb') as private_file:
             private_file.write(private_key.private_bytes(
