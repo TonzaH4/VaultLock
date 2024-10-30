@@ -84,10 +84,8 @@ def create_hmac(aes_key, data):
     h.update(data)
     return h.finalize()
 
-# Main encryption process for multiple files
-def main_encrypt(file_paths):
-    private_key, public_key = generate_rsa_keys()
-
+# Process files or directory for encryption
+def process_files(file_paths, private_key, public_key):
     # Generate a random salt for key derivation
     salt = os.urandom(16)
 
@@ -116,6 +114,11 @@ def main_encrypt(file_paths):
         except Exception as e:
             logging.error(f'Error writing encrypted file {enc_file_path}: {e}')
 
+# Main encryption process
+def main_encrypt(file_paths):
+    private_key, public_key = generate_rsa_keys()
+    process_files(file_paths, private_key, public_key)
+
     # Save the private key securely with a random password
     key_password = os.urandom(16)
     try:
@@ -139,7 +142,15 @@ def main_encrypt(file_paths):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Encrypt files.')
-    parser.add_argument('-f', '--files', required=True, nargs='+', help='Files to encrypt')
+    parser.add_argument('-f', '--files', required=True, nargs='+', help='Files or directory to encrypt')
 
     args = parser.parse_args()
-    main_encrypt(args.files)
+
+    # Check if the input is a directory or a file
+    input_path = args.files[0]
+    if os.path.isdir(input_path):
+        file_paths = [os.path.join(input_path, f) for f in os.listdir(input_path) if os.path.isfile(os.path.join(input_path, f))]
+    else:
+        file_paths = args.files
+
+    main_encrypt(file_paths)
