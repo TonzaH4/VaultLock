@@ -26,7 +26,7 @@ def derive_key(password, salt):
     kdf = Scrypt(
         salt=salt,
         length=32,  # 256 bits for AES
-        n=2**14,    # CPU/memory cost factor
+        n=2**16,    # CPU/memory cost factor
         r=8,        # Block size
         p=1,        # Parallelization factor
         backend=default_backend()
@@ -79,9 +79,9 @@ def securely_delete(file_path):
         os.remove(file_path)  # Now remove the file
 
 # Add HMAC for file integrity check
-def create_hmac(aes_key, data):
+def create_hmac(aes_key, ciphertext, iv, salt):
     h = hmac.HMAC(aes_key, hashes.SHA256(), backend=default_backend())
-    h.update(data)
+    h.update(salt + iv + ciphertext)  # Include salt and IV in HMAC
     return h.finalize()
 
 # Process files or directory for encryption
@@ -97,7 +97,7 @@ def process_files(file_paths, private_key, public_key):
 
     for file_path in file_paths:
         iv, ciphertext = encrypt_file(file_path, aes_key)  # Get unique AES key and IV
-        hmac_signature = create_hmac(aes_key, ciphertext)  # Generate HMAC for integrity check
+        hmac_signature = create_hmac(aes_key, ciphertext, iv, salt)  # Generate HMAC for integrity check
         encrypted_aes_key = encrypt_aes_key(public_key, aes_key)
 
         # Structuring the file content: Encrypted AES key (RSA), salt, IV, Ciphertext, HMAC
