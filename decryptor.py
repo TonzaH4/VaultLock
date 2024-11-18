@@ -6,6 +6,7 @@ from cryptography.hazmat.primitives import serialization, hashes, hmac
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.primitives.asymmetric import padding as asymmetric_padding
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
+from cryptography.hazmat.primitives import padding
 import struct
 
 # Configure logging
@@ -16,7 +17,7 @@ def derive_key(password, salt):
     kdf = Scrypt(
         salt=salt,
         length=32,  # 256 bits for AES
-        n=2**14,    # CPU/memory cost factor
+        n=2**16,    # CPU/memory cost factor
         r=8,        # Block size
         p=1,        # Parallelization factor
         backend=default_backend()
@@ -36,7 +37,6 @@ def decrypt_aes_key(rsa_private_key, encrypted_aes_key):
 
 # Remove padding according to PKCS#7
 def unpad(padded_data):
-    from cryptography.hazmat.primitives import padding
     unpadder = padding.PKCS7(algorithms.AES.block_size).unpadder()
     return unpadder.update(padded_data) + unpadder.finalize()
 
@@ -57,9 +57,9 @@ def securely_delete(file_path):
         os.remove(file_path)  # Now remove the file
 
 # Verify HMAC for file integrity check
-def verify_hmac(aes_key, data, expected_hmac):
+def verify_hmac(aes_key, ciphertext, iv, salt, expected_hmac):
     h = hmac.HMAC(aes_key, hashes.SHA256(), backend=default_backend())
-    h.update(data)
+    h.update(salt + iv + ciphertext)
     h.verify(expected_hmac)
 
 # Process files or directory for decryption
@@ -101,7 +101,7 @@ def process_files(enc_file_paths, pem_file, password, password_file):
             aes_key = decrypt_aes_key(private_key, encrypted_aes_key)
 
             # Verify HMAC integrity before decryption
-            verify_hmac(aes_key, ciphertext, hmac_signature)
+            verify_hmac(aes_key, ciphertext, iv, salt, hmac_signature)
 
             # Decrypt the file
             plaintext = decrypt_file(ciphertext, aes_key, iv)
