@@ -49,20 +49,20 @@ pip3 install cryptography
 
 ### Encrypting Files
 
-To encrypt files, run the `Encryptor.py` script with the paths of the files you wish to encrypt:
+To encrypt files, run the `encryptor.py` script with the paths of the files you wish to encrypt:
 
 ```bash
-python3 Encryptor.py -f file1.txt file2.txt
+python3 encryptor.py -f file1.txt file2.txt
 ```
 
 This will create encrypted files with the `.enc` extension in the same directory.
 
 ### Decrypting Files
 
-To decrypt the previously encrypted files, run the `Decryptor.py` script with the paths of the encrypted files and the corresponding private key and password files:
+To decrypt the previously encrypted files, run the `decryptor.py` script with the paths of the encrypted files and the corresponding private key and password files:
 
 ```bash
-python3 Decryptor.py -f file1.txt.enc file2.txt.enc -k private_key.pem -p password.txt
+python3 decryptor.py -f file1.txt.enc file2.txt.enc -k private_key.pem -p password.txt
 ```
 
 ## File Structure
@@ -70,8 +70,8 @@ python3 Decryptor.py -f file1.txt.enc file2.txt.enc -k private_key.pem -p passwo
 ```
 VaultLock/
 │
-├── Encryptor.py          # Script for encrypting files
-├── Decryptor.py          # Script for decrypting files
+├── encryptor.py          # Script for encrypting files
+├── decryptor.py          # Script for decrypting files
 ```
 
 ## How It Works
