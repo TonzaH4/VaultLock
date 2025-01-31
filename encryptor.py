@@ -35,7 +35,6 @@ def derive_key(password, salt):
 
 # Pad plaintext to be a multiple of block size (16 bytes for AES)
 def pad(plaintext):
-    from cryptography.hazmat.primitives import padding
     padder = padding.PKCS7(algorithms.AES.block_size).padder()
     padded_data = padder.update(plaintext) + padder.finalize()
     return padded_data
@@ -85,7 +84,7 @@ def create_hmac(aes_key, ciphertext, iv, salt):
     return h.finalize()
 
 # Process files or directory for encryption
-def process_files(file_paths, private_key, public_key):
+def process_files(file_paths, public_key):
     # Generate a random salt for key derivation
     salt = os.urandom(16)
 
